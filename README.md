@@ -1,7 +1,7 @@
 # Clip Creator
 
 <p align="center">
-  <img src="assets/clip-creator.png" alt="Clip Creator logo" width="300">
+  <img src="assets/clip-creator.png" alt="Clip Creator logo" width="300" height="300">
 </p>
 
 A small PowerShell + Windows Forms front end for
@@ -9,67 +9,67 @@ A small PowerShell + Windows Forms front end for
 movie in a folder. Each movie gets its own output folder, with the
 generated clip saved as `theme.mp4`.
 
-![Windows](https://img.shields.io/badge/platform-Windows-blue)
+![Platform](https://img.shields.io/badge/platform-Windows-blue)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)
 ![Version](https://img.shields.io/badge/version-1.0.0-00BFFF)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 ## Features
 
--   **One random clip per movie** --- scans the selected movie folder
-    and creates a single clip from a random point in each video.
--   **MP4 output** --- every generated clip is saved as `theme.mp4`.
--   **Per-movie folders** --- automatically creates a separate output
-    folder named after each movie.
--   **Configurable clip length** --- defaults to 10 seconds but can be
-    changed in the GUI.
--   **Avoid start/end** --- can avoid the opening and closing portion of
-    each movie when choosing the random clip position.
--   **Existing clip protection** --- if `theme.mp4` already exists, Clip
-    Creator asks whether you want to overwrite it or skip that movie.
--   **Subfolder support** --- optionally searches for movies inside
-    subfolders.
+-   **One random clip per movie** --- chooses a random point in each
+    movie and creates one clip.
+-   **MP4 output** --- clips are exported as `theme.mp4`.
+-   **Per-movie folders** --- each movie gets its own named output
+    folder.
+-   **Configurable clip length** --- 10 seconds by default.
+-   **Avoid start/end** --- avoids the opening and closing portion of a
+    movie where possible.
+-   **Existing clip protection** --- asks whether to overwrite an
+    existing `theme.mp4`.
+-   **Subfolder support** --- optionally scans movie folders
+    recursively.
 -   **Multiple video formats** --- supports MKV, MP4, AVI, MOV, M4V,
     WMV, MPG, MPEG, TS, M2TS and WebM.
--   **Live progress** --- shows percentage complete, current movie,
-    estimated time left and the number of clips created.
--   **Stop button** --- processing can be cancelled from the GUI.
--   **FFmpeg check** --- verifies that FFmpeg is available before you
-    start.
--   **Open Output Folder** --- opens the selected destination directly
-    from the GUI.
--   **Completion prompt** --- when processing finishes, asks whether you
-    want to open the output folder.
--   **Cinematic interface** --- custom Windows GUI with visual
-    button-press feedback and an About dialog.
+-   **Improved progress display** --- shows percentage complete, current
+    movie, time left and clips created.
+-   **Stop processing** --- processing can be cancelled from the GUI.
+-   **FFmpeg check** --- verifies that FFmpeg is available.
+-   **Open Output Folder** --- opens the destination directly from the
+    application.
+-   **Completion prompt** --- asks whether to open the output directory
+    when processing finishes.
+-   **Modern cinematic interface** --- includes visual pressed-state
+    feedback on the main buttons.
+-   **About window** --- displays the application version and project
+    credits.
+-   **EXE-friendly DPI handling** --- improves layout consistency when
+    the script is compiled with PS2EXE.
 
 ## Requirements
 
--   Windows 10 or Windows 11.
--   PowerShell 5.1 or newer.
+-   Windows 10 or Windows 11
+-   PowerShell 5.1 or newer
 -   [FFmpeg](https://ffmpeg.org/) and `ffprobe` installed and available
-    through your Windows `PATH`.
+    through the Windows `PATH`
 
-You can check whether FFmpeg is available from a terminal with:
+Check FFmpeg from PowerShell with:
 
 ``` powershell
 ffmpeg -version
 ffprobe -version
 ```
 
-Clip Creator also includes a **Check FFmpeg** button in the GUI.
+Clip Creator also includes a **Check FFmpeg** button.
 
 ## Usage
 
-Download `clip-creator.ps1` and run it either by right-clicking it and
-choosing PowerShell, or from a PowerShell terminal:
+Run the PowerShell version with:
 
 ``` powershell
 .\clip-creator.ps1
 ```
 
-If your PowerShell execution policy prevents the script from running,
-you can launch it for that session with:
+If script execution is blocked for the current session:
 
 ``` powershell
 powershell -ExecutionPolicy Bypass -File .\clip-creator.ps1
@@ -77,17 +77,17 @@ powershell -ExecutionPolicy Bypass -File .\clip-creator.ps1
 
 Then:
 
-1.  Select your **Movies Folder**.
-2.  Select your **Output Folder**.
-3.  Set the **Clip Length** and **Avoid Start/End** values.
+1.  Select the **Movies Folder**.
+2.  Select the **Output Folder**.
+3.  Set **Clip Length** and **Avoid Start/End**.
 4.  Choose whether to **Include subfolders**.
 5.  Click **Create Random Clips**.
-6.  Clip Creator processes each movie and updates the progress display.
+6.  Follow the progress display while the movies are processed.
 7.  When complete, choose whether to open the output folder.
 
 ## Output
 
-Given a movie folder such as:
+For:
 
 ``` text
 Movies/
@@ -108,52 +108,75 @@ Random Clips/
     └── theme.mp4
 ```
 
-If a movie already has a `theme.mp4` in its output folder, you will be
-asked whether to overwrite the existing clip.
+If `theme.mp4` already exists, Clip Creator asks whether it should be
+overwritten.
+
+## Creating the EXE
+
+Clip Creator can be packaged with the PowerShell `ps2exe` module:
+
+``` powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+Install-Module -Name ps2exe -Scope CurrentUser -Force
+Import-Module ps2exe
+
+Invoke-ps2exe -inputFile .\clip-creator.ps1 -outputFile ".\Clip Creator v1.0.0.exe" `
+    -STA -noConsole `
+    -iconFile .\clip-creator.ico `
+    -title "Clip Creator" `
+    -version "1.0.0" `
+    -product "Clip Creator" `
+    -company "Jason Rhodes" `
+    -copyright "Copyright © 2026 Jason Rhodes"
+```
+
+The recommended executable filename is:
+
+``` text
+Clip Creator v1.0.0.exe
+```
 
 ## Troubleshooting
 
-**The GUI opens but FFmpeg is not detected**
+**The compiled EXE layout looks different from the PowerShell version**
 
-Make sure both `ffmpeg.exe` and `ffprobe.exe` are installed and
-available through the Windows `PATH`. Open a new terminal and run
-`ffmpeg -version` and `ffprobe -version` to confirm Windows can find
-them.
+The current script includes explicit DPI-awareness handling and disables
+Windows Forms automatic scaling to help the compiled PS2EXE interface
+retain the intended layout. Rebuild the EXE from the latest
+`clip-creator.ps1`.
+
+**FFmpeg is not detected**
+
+Make sure `ffmpeg.exe` and `ffprobe.exe` are installed and available
+through the Windows `PATH`. Open a new PowerShell window and run
+`ffmpeg -version` and `ffprobe -version`.
 
 **PowerShell says script execution is disabled**
 
-Your PowerShell execution policy is preventing `.ps1` files from
-running. You can run Clip Creator for that session with:
-
-``` powershell
-powershell -ExecutionPolicy Bypass -File .\clip-creator.ps1
-```
-
-On managed work or college computers, follow your organisation's policy
-rather than changing machine-wide execution settings.
+Run the script with a process-only execution-policy bypass as shown in
+the Usage section. On managed computers, follow your organisation's
+policies.
 
 **A clip already exists**
 
-Clip Creator checks for an existing `theme.mp4` before processing each
-movie. Choose **Yes** to replace it with a new random clip or **No** to
-keep the existing file and continue to the next movie.
+Choose **Yes** to replace the existing `theme.mp4`, or **No** to keep it
+and continue to the next movie.
 
-**The time-left estimate changes while processing**
+**The time-left estimate changes**
 
-This is expected. The estimate is calculated from the movies processed
-so far, so it becomes more representative as additional movies finish.
+This is expected. The estimate is based on processing completed so far
+and can change as more movies finish.
 
 ## How it works
 
-Clip Creator is a PowerShell Windows Forms application. It scans the
-selected folder for supported video files, uses `ffprobe` to determine
-each movie's duration, chooses a random position while respecting the
-configured start/end avoidance period, and calls FFmpeg to create the
-MP4 clip.
+Clip Creator scans the selected folder for supported video files. It
+uses `ffprobe` to determine each movie's duration, selects a random
+position while respecting the configured start/end avoidance period, and
+uses FFmpeg to create the MP4 clip.
 
-The GUI keeps track of the current movie, completion percentage,
-estimated time remaining and successfully created clips. Output is
-organised automatically into one folder per movie.
+The GUI tracks the current movie, completion percentage, estimated time
+left and number of clips created. Output is organised automatically into
+one folder per movie.
 
 ## Version
 
@@ -171,4 +194,5 @@ Video processing: [FFmpeg](https://ffmpeg.org/).
 
 ## License
 
-MIT --- see [LICENSE](LICENSE).
+Clip Creator is released under the **MIT License**. See
+[LICENSE](LICENSE).

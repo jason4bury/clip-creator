@@ -5,6 +5,25 @@ $script:AppVersion = "1.0.0"
 # Requires ffmpeg.exe and ffprobe.exe in PATH or beside this script.
 
 Add-Type -AssemblyName System.Windows.Forms
+
+# Keep the compiled EXE in the same DPI coordinate system as the .ps1 version.
+# This must run before the first Form/control is created.
+try {
+    if ([Environment]::OSVersion.Version.Major -ge 6) {
+        Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public static class ClipCreatorDpi {
+    [DllImport("user32.dll")]
+    public static extern bool SetProcessDPIAware();
+}
+"@ -ErrorAction SilentlyContinue
+        [void][ClipCreatorDpi]::SetProcessDPIAware()
+    }
+} catch {
+    # If DPI awareness is already established by the host, continue normally.
+}
+
 Add-Type -AssemblyName System.Drawing
 [System.Windows.Forms.Application]::EnableVisualStyles()
 
@@ -41,6 +60,7 @@ $background = [System.Drawing.Image]::FromStream($stream)
 
 # The reference artwork is 1536 x 1024. We use the exact same coordinate system.
 $form = New-Object System.Windows.Forms.Form
+$form.AutoScaleMode = [System.Windows.Forms.AutoScaleMode]::None
 $form.Text = "Random Movie Clips"
 $form.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::None
 $form.StartPosition = "CenterScreen"
@@ -433,7 +453,7 @@ $btnAbout.Add_Click({
     $aboutVersion = New-Object System.Windows.Forms.Label
     $aboutVersion.Text = "Version $($script:AppVersion)  •  FFmpeg Movie Clip Utility"
     $aboutVersion.Location = New-Object System.Drawing.Point(87,56)
-    $aboutVersion.Size = New-Object System.Drawing.Size(350,24)
+    $aboutVersion.Size = New-Object System.Drawing.Size(455,24)
     $aboutVersion.ForeColor = [System.Drawing.Color]::FromArgb(180,215,245)
     $aboutHeader.Controls.Add($aboutVersion)
 
