@@ -1,0 +1,26 @@
+# Windows
+Thumbs.db
+Desktop.ini
+
+# PowerShell / editor files
+*.ps1.bak
+*.tmp
+.vscode/
+.idea/
+
+# Generated clips and local media
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.m4v
+*.wmv
+*.mpg
+*.mpeg
+*.ts
+*.m2ts
+*.webm
+
+# Local output directories
+output/
+Random Clips/
