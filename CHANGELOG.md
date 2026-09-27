@@ -2,16 +2,29 @@
 
 All notable changes to Clip Creator are documented in this file.
 
+## 1.1.0
+
+### Added
+
+- Preserves the source directory structure beneath the selected Movies Folder.
+- Creates a `backdrops` directory inside each generated movie folder.
+- Stores generated clips as `backdrops\theme.mp4`.
+- Adds path-safety checks so rooted or drive-qualified source paths cannot accidentally be appended to the output folder.
+
+### Fixed
+
+- Fixed invalid output paths that could include a source drive letter such as `V:\` beneath the destination folder.
+- Fixed the `GetFullPath()` empty-path error caused by the incorrect `$moviesFolder` variable reference; folder handling now correctly uses `$movieFolder`.
+
+### Changed
+
+- Application version updated from **1.0.0** to **1.1.0**.
+- About window now displays **Version 1.1.0**.
+- Recommended executable filename is now `Clip Creator v1.1.0.exe`.
+- README updated for the new folder and `backdrops` output structure.
+
+
 ## 1.0.0
-
-### Latest changes
-
-- Added preservation of the source directory structure beneath the selected Movies Folder.
-- Added a `backdrops` directory inside each generated movie folder.
-- Moved generated clips to `backdrops\theme.mp4`.
-- Fixed invalid output paths that could incorrectly include a source drive letter such as `V:\` beneath the destination folder.
-- Fixed the `GetFullPath()` empty-path error caused by an incorrect `$moviesFolder` variable reference; folder handling now correctly uses `$movieFolder`.
-- Added path-safety checks so rooted or drive-qualified source paths cannot accidentally be appended to the output folder.
 
 ### Added
 

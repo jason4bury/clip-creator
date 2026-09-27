@@ -11,7 +11,7 @@ generated clip saved as `theme.mp4`.
 
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)
-![Version](https://img.shields.io/badge/version-1.0.0-00BFFF)
+![Version](https://img.shields.io/badge/version-1.1.0-00BFFF)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
 ## Features
@@ -120,11 +120,11 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 Install-Module -Name ps2exe -Scope CurrentUser -Force
 Import-Module ps2exe
 
-Invoke-ps2exe -inputFile .\clip-creator.ps1 -outputFile ".\Clip Creator v1.0.0.exe" `
+Invoke-ps2exe -inputFile .\clip-creator.ps1 -outputFile ".\Clip Creator v1.1.0.exe" `
     -STA -noConsole `
     -iconFile .\clip-creator.ico `
     -title "Clip Creator" `
-    -version "1.0.0" `
+    -version "1.1.0" `
     -product "Clip Creator" `
     -company "Jason Rhodes" `
     -copyright "Copyright © 2026 Jason Rhodes"
@@ -133,7 +133,7 @@ Invoke-ps2exe -inputFile .\clip-creator.ps1 -outputFile ".\Clip Creator v1.0.0.e
 The recommended executable filename is:
 
 ``` text
-Clip Creator v1.0.0.exe
+Clip Creator v1.1.0.exe
 ```
 
 ## Troubleshooting
@@ -180,7 +180,7 @@ one folder per movie.
 
 ## Version
 
-Current release: **1.0.0**
+Current release: **1.1.0**
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 

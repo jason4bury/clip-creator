@@ -1,5 +1,5 @@
 ﻿# Random Movie Clips - Pixel-matched GUI
-$script:AppVersion = "1.0.0"
+$script:AppVersion = "1.1.0"
 # Visual design uses the supplied reference image as the interface artwork.
 # One random MP4 clip per movie; preserves source folders and creates <Movie Name>\backdrops
 # Requires ffmpeg.exe and ffprobe.exe in PATH or beside this script.
