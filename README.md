@@ -14,6 +14,15 @@ generated clip saved as `theme.mp4`.
 ![Version](https://img.shields.io/badge/version-1.1.0-00BFFF)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
+## What's New in v1.1.0
+
+- **Preserved source folder structure** — Clip Creator now recreates the directories beneath the selected Movies Folder in the output location.
+- **Backdrops folders** — every processed movie gets a `backdrops` directory.
+- **New clip location** — generated clips are stored as `backdrops\theme.mp4`.
+- **Safer path handling** — source drive letters such as `V:\` are no longer accidentally included beneath the destination folder.
+- **Path fixes** — corrected relative-path handling and the `$movieFolder` variable used by `GetFullPath()`.
+- **Updated About window** — displays **Version 1.1.0**.
+
 ## Features
 
 -   **One random clip per movie** --- chooses a random point in each
