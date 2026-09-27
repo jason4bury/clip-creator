@@ -1,7 +1,7 @@
 ﻿# Random Movie Clips - Pixel-matched GUI
 $script:AppVersion = "1.0.0"
 # Visual design uses the supplied reference image as the interface artwork.
-# One random MP4 clip per movie -> <Output>\<Movie Name>\theme.mp4
+# One random MP4 clip per movie; preserves source folders and creates <Movie Name>\backdrops
 # Requires ffmpeg.exe and ffprobe.exe in PATH or beside this script.
 
 Add-Type -AssemblyName System.Windows.Forms
@@ -459,7 +459,7 @@ $btnAbout.Add_Click({
 
     # Description
     $description = New-Object System.Windows.Forms.Label
-    $description.Text = "Creates one random MP4 clip from each movie in the selected folder.`r`nEach movie gets its own output folder containing theme.mp4."
+    $description.Text = "Creates one random MP4 clip from each movie in the selected folder.`r`nSource folders are preserved. Each movie gets its own folder with theme.mp4 stored inside its backdrops folder."
     $description.Location = New-Object System.Drawing.Point(28,116)
     $description.Size = New-Object System.Drawing.Size(500,58)
     $description.Font = New-Object System.Drawing.Font("Segoe UI",10)
@@ -684,9 +684,38 @@ $hotStart.Add_Click({
             }
 
             $safeName = ([IO.Path]::GetFileNameWithoutExtension($movie.Name)) -replace '[\\/:*?"<>|]','_'
-            $movieOut = Join-Path $outputFolder $safeName
+
+            # Recreate only the path BELOW the selected Movies Folder.
+            # Normalize both paths first so a drive letter (for example V:\)
+            # can never accidentally become part of the output path.
+            $sourceRoot = [System.IO.Path]::GetFullPath($movieFolder).TrimEnd('\','/')
+            $movieDirectory = [System.IO.Path]::GetFullPath($movie.DirectoryName).TrimEnd('\','/')
+            $relativeDirectory = ""
+
+            if ($movieDirectory.Equals($sourceRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+                $relativeDirectory = ""
+            }
+            elseif ($movieDirectory.StartsWith($sourceRoot + "\", [System.StringComparison]::OrdinalIgnoreCase)) {
+                $relativeDirectory = $movieDirectory.Substring($sourceRoot.Length + 1)
+            }
+
+            # Safety: never allow a rooted/drive-qualified path to be appended
+            # beneath the output folder.
+            if ([System.IO.Path]::IsPathRooted($relativeDirectory) -or $relativeDirectory -match '^[A-Za-z]:') {
+                $relativeDirectory = ""
+            }
+
+            $parentOut = $outputFolder
+            if (-not [string]::IsNullOrWhiteSpace($relativeDirectory)) {
+                $parentOut = Join-Path -Path $outputFolder -ChildPath $relativeDirectory
+            }
+
+            # Each video gets a movie folder and theme.mp4 is stored inside its backdrops directory.
+            $movieOut = Join-Path $parentOut $safeName
+            $backdropsOut = Join-Path $movieOut "backdrops"
             New-Item -ItemType Directory -Path $movieOut -Force | Out-Null
-            $outputFile = Join-Path $movieOut "theme.mp4"
+            New-Item -ItemType Directory -Path $backdropsOut -Force | Out-Null
+            $outputFile = Join-Path $backdropsOut "theme.mp4"
             # Ask before replacing an existing clip for this movie.
             if (Test-Path -LiteralPath $outputFile) {
                 $overwriteChoice = [System.Windows.Forms.MessageBox]::Show(

@@ -87,29 +87,29 @@ Then:
 
 ## Output
 
-For:
+Clip Creator preserves the folder structure **below the selected Movies Folder**.
 
-``` text
-Movies/
-├── Alien.mkv
-├── Blade Runner.mp4
-└── The Thing.mkv
+For example, if the selected Movies Folder is `V:\Documentary` and contains:
+
+```text
+V:\Documentary
+└── Doctor Who Am I (2022)
+    └── Doctor Who Am I.mkv
 ```
 
-Clip Creator creates:
+with the output folder set to `D:\Random Clips`, Clip Creator creates:
 
-``` text
-Random Clips/
-├── Alien/
-│   └── theme.mp4
-├── Blade Runner/
-│   └── theme.mp4
-└── The Thing/
-    └── theme.mp4
+```text
+D:\Random Clips
+└── Doctor Who Am I (2022)
+    └── Doctor Who Am I
+        └── backdrops
+            └── theme.mp4
 ```
 
-If `theme.mp4` already exists, Clip Creator asks whether it should be
-overwritten.
+The source drive letter and selected root folder are not copied into the output. Only directories beneath the selected Movies Folder are recreated.
+
+If `backdrops\theme.mp4` already exists, Clip Creator asks whether it should be overwritten.
 
 ## Creating the EXE
 
