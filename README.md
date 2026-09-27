@@ -1,8 +1,17 @@
+# Clip Creator
+
+---
+
 <p align="center">
   <img src="assets/clip-creator.png" alt="Clip Creator" width="300" height="300">
 </p>
 
-# Clip Creator
+A modern PowerShell GUI for creating random MP4 clips from your movie collection using **FFmpeg**. Clip Creator creates one configurable random clip per movie and saves it as `theme.mp4` inside a movie-named output folder.
+
+![Platform](https://img.shields.io/badge/platform-Windows-0078D4)
+![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)
+![Version](https://img.shields.io/badge/version-1.0.0-00BFFF)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
 **Clip Creator** is a Windows PowerShell GUI for creating one random
 video clip from each movie in a folder using FFmpeg.
