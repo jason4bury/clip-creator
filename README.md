@@ -1,12 +1,9 @@
 # Clip Creator
 
-```{=html}
 <p align="center">
-```
-`<img src="assets/clip-creator.png" alt="Clip Creator logo" width="300">`{=html}
-```{=html}
+  <img src="assets/clip-creator.png" alt="Clip Creator logo" width="300">
 </p>
-```
+
 A small PowerShell + Windows Forms front end for
 [FFmpeg](https://ffmpeg.org/) that creates one random MP4 clip from each
 movie in a folder. Each movie gets its own output folder, with the
