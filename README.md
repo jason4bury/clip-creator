@@ -6,7 +6,9 @@ video clip from each movie in a folder using FFmpeg.
 Each generated clip is saved as an MP4 named `theme.mp4` inside its own
 movie-named output folder.
 
-![Clip Creator icon](assets/clip-creator.png)
+<p align="center">
+  <img src="assets/clip-creator.png" alt="Clip Creator" width="300">
+</p>
 
 ## Features
 
