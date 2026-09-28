@@ -2,6 +2,25 @@
 
 All notable changes to Clip Creator are documented in this file.
 
+## 1.3.0
+
+### Added
+
+- Network-aware Windows Shell folder picker for the Movies Folder.
+- Network-aware Windows Shell folder picker for the Output Folder.
+- Improved support for mapped network drives used by NAS movie libraries.
+- Support for selecting UNC network shares such as `\\Synology\Movies`.
+- Fallback to the standard Windows Forms folder picker if Windows Shell browsing is unavailable.
+
+### Changed
+
+- Folder browsing now exposes local folders, This PC, mapped network drives and Windows network locations more reliably.
+- Improved usability for movie collections stored on Synology and other NAS devices.
+- Application version updated from **1.2.0** to **1.3.0**.
+- About window now displays **Version 1.3.0**.
+- Recommended executable filename is now `Clip Creator v1.3.0.exe`.
+
+
 ## 1.2.0
 
 ### Added

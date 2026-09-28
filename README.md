@@ -11,22 +11,23 @@ generated clip saved as `theme.mp4`.
 
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)
-![Version](https://img.shields.io/badge/version-1.2.0-00BFFF)
+![Version](https://img.shields.io/badge/version-1.3.0-00BFFF)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-## What's New in v1.2.0
+## What's New in v1.3.0
 
-- **HTML processing report** — creates a self-contained web-page log after each completed run.
-- **Colour-coded results** — successful clips are green, warnings yellow, errors red and skipped movies separately identified.
-- **FFmpeg diagnostics** — captures FFmpeg messages against the relevant movie.
-- **Error highlighting** — failed exports and FFprobe duration errors are clearly highlighted.
-- **Warning handling** — successfully created clips with FFmpeg diagnostic messages can be shown as warnings instead of failures.
-- **Run summary** — displays totals for successful, warning, error and skipped results.
-- **View Log prompt** — asks whether to open the report in the default browser after processing.
-- **Timestamped logs** — reports use names such as `Clip-Creator-Log-20260928-095800.html`.
-- **Version update** — Clip Creator is now **1.2.0**.
+- **Network-aware folder browsing** — the Movies Folder and Output Folder selectors now use the Windows Shell folder picker.
+- **Mapped network drive support** — mapped drives used for NAS storage are much easier to browse and select.
+- **Synology/NAS friendly** — designed to work with movie collections accessed through Windows network drives.
+- **UNC path support** — network shares such as `\\Synology\Movies` can be used directly.
+- **Local and network locations** — the same Browse controls work with local folders, This PC and Windows network locations.
+- **Fallback folder picker** — if the Windows Shell picker cannot be opened, Clip Creator falls back to the standard Windows Forms folder browser.
+- **Version update** — Clip Creator is now **1.3.0**.
 
 ## Features
+
+- **Network-aware folder browsing** — browse mapped network drives and Windows network locations.
+- **UNC share support** — use NAS paths such as `\\Synology\Movies`.
 
 -   **One random clip per movie** --- chooses a random point in each
     movie and creates one clip.
@@ -72,6 +73,28 @@ ffprobe -version
 ```
 
 Clip Creator also includes a **Check FFmpeg** button.
+
+## Network and NAS Storage
+
+Clip Creator supports movie libraries stored on network storage such as a Synology NAS.
+
+The **Movies Folder** and **Output Folder** Browse buttons use the Windows Shell folder picker, making mapped network drives and Windows network locations available alongside local folders.
+
+You can use either a mapped drive:
+
+```text
+V:\Movies
+```
+
+or a UNC network path:
+
+```text
+\\Synology\Movies
+```
+
+Clip Creator preserves the directory structure beneath the selected Movies Folder when creating the output structure.
+
+If a mapped drive is visible in File Explorer but not in Clip Creator, make sure Clip Creator is running under the same Windows user/security context that created the drive mapping. Clip Creator does not normally need to be run as Administrator.
 
 ## Usage
 
@@ -132,11 +155,11 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 Install-Module -Name ps2exe -Scope CurrentUser -Force
 Import-Module ps2exe
 
-Invoke-ps2exe -inputFile .\clip-creator.ps1 -outputFile ".\Clip Creator v1.2.0.exe" `
+Invoke-ps2exe -inputFile .\clip-creator.ps1 -outputFile ".\Clip Creator v1.3.0.exe" `
     -STA -noConsole `
     -iconFile .\clip-creator.ico `
     -title "Clip Creator" `
-    -version "1.2.0" `
+    -version "1.3.0" `
     -product "Clip Creator" `
     -company "Jason Rhodes" `
     -copyright "Copyright © 2026 Jason Rhodes"
@@ -145,7 +168,7 @@ Invoke-ps2exe -inputFile .\clip-creator.ps1 -outputFile ".\Clip Creator v1.2.0.e
 The recommended executable filename is:
 
 ``` text
-Clip Creator v1.2.0.exe
+Clip Creator v1.3.0.exe
 ```
 
 ## Processing Report
@@ -204,7 +227,7 @@ one folder per movie.
 
 ## Version
 
-Current release: **1.2.0**
+Current release: **1.3.0**
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 

@@ -1,5 +1,5 @@
 ﻿# Random Movie Clips - Pixel-matched GUI
-$script:AppVersion = "1.2.0"
+$script:AppVersion = "1.3.0"
 # Visual design uses the supplied reference image as the interface artwork.
 # One random MP4 clip per movie; preserves source folders and creates <Movie Name>\backdrops
 # Requires ffmpeg.exe and ffprobe.exe in PATH or beside this script.
@@ -544,22 +544,57 @@ $btnAbout.Add_Click({
 $hotClose.Add_Click({ $form.Close() })
 $hotMin.Add_Click({ $form.WindowState = [System.Windows.Forms.FormWindowState]::Minimized })
 
-$dlg = New-Object System.Windows.Forms.FolderBrowserDialog
+# Network-aware Windows Shell folder picker.
+# Supports local folders, mapped network drives and UNC shares such as \\Synology\Movies.
+function Select-ClipCreatorFolder {
+    param([string]$Title,[string]$InitialPath)
+
+    try {
+        $shell = New-Object -ComObject Shell.Application
+        $flags = 0x0001 -bor 0x0040 -bor 0x0050
+        $root = 0
+        if (-not [string]::IsNullOrWhiteSpace($InitialPath) -and
+            (Test-Path -LiteralPath $InitialPath -PathType Container)) {
+            $root = $InitialPath
+        }
+
+        $folder = $shell.BrowseForFolder([int]$form.Handle, $Title, $flags, $root)
+        if ($null -ne $folder) {
+            $selected = $folder.Self.Path
+            if (-not [string]::IsNullOrWhiteSpace($selected)) { return $selected }
+        }
+        return $null
+    }
+    catch {
+        Add-Log "Network-aware folder picker warning: $($_.Exception.Message)" ([System.Drawing.Color]::Khaki)
+    }
+
+    $fallback = New-Object System.Windows.Forms.FolderBrowserDialog
+    $fallback.Description = $Title
+    if (-not [string]::IsNullOrWhiteSpace($InitialPath) -and
+        (Test-Path -LiteralPath $InitialPath -PathType Container)) {
+        $fallback.SelectedPath = $InitialPath
+    }
+    if ($fallback.ShowDialog($form) -eq [System.Windows.Forms.DialogResult]::OK) {
+        return $fallback.SelectedPath
+    }
+    return $null
+}
 
 $hotBrowseMovie.Add_Click({
-    $dlg.Description = "Select your movies folder"
-    if ($dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-        $txtMovie.Text = $dlg.SelectedPath
+    $selectedPath = Select-ClipCreatorFolder -Title "Select your movies folder - network locations are supported" -InitialPath $txtMovie.Text
+    if (-not [string]::IsNullOrWhiteSpace($selectedPath)) {
+        $txtMovie.Text = $selectedPath
         if ([string]::IsNullOrWhiteSpace($txtOutput.Text)) {
-            $txtOutput.Text = Join-Path $dlg.SelectedPath "Random Clips"
+            $txtOutput.Text = Join-Path $selectedPath "Random Clips"
         }
     }
 })
 
 $hotBrowseOutput.Add_Click({
-    $dlg.Description = "Select the output folder"
-    if ($dlg.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-        $txtOutput.Text = $dlg.SelectedPath
+    $selectedPath = Select-ClipCreatorFolder -Title "Select the output folder - network locations are supported" -InitialPath $txtOutput.Text
+    if (-not [string]::IsNullOrWhiteSpace($selectedPath)) {
+        $txtOutput.Text = $selectedPath
     }
 })
 
