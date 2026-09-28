@@ -2,6 +2,80 @@
 
 All notable changes to Clip Creator are documented in this file.
 
+## 1.5.0
+
+### Added
+
+- Added a partial HTML conversion log when processing is stopped before completion.
+- Added a prompt to view the partial HTML conversion log after cancellation.
+- Added a separate prompt to open the partial output folder containing clips created before cancellation.
+- Partial reports clearly identify that processing was stopped by the user and include results up to the cancellation point.
+
+### Changed
+
+- Simplified generated clip folder structure.
+- Removed the unnecessary extra folder based on the source video filename.
+- Clips are now written directly to `Movie Folder\backdrops\theme.mp4`.
+- Application version updated from **1.4.0** to **1.5.0**.
+- About window now displays **Version 1.5.0**.
+- Recommended executable filename is now `Clip Creator v1.5.0.exe`.
+
+### Example
+
+Previous output:
+
+```text
+Mad Max (1979)
+└── Mad Max
+    └── backdrops
+        └── theme.mp4
+```
+
+New output:
+
+```text
+Mad Max (1979)
+└── backdrops
+    └── theme.mp4
+```
+
+
+## 1.4.0
+
+### Added
+
+- Added the option to stop all remaining file creations when an existing `theme.mp4` is encountered.
+- Existing-clip prompt now clearly explains the Yes, No and Cancel actions.
+- Cancellation from the existing-clip prompt is recorded in the HTML processing log.
+
+### Changed
+
+- **Yes** overwrites the existing clip.
+- **No** keeps the existing clip and continues processing.
+- **Cancel** keeps the existing clip and stops files being created.
+- Application version updated from **1.3.1** to **1.4.0**.
+- About window now displays **Version 1.4.0**.
+- Recommended executable filename is now `Clip Creator v1.4.0.exe`.
+
+
+## 1.3.1
+
+### Fixed
+
+- Fixed repeated `Cannot bind argument to parameter 'Path' because it is null` dialogs in the PS2EXE-compiled application.
+- Fixed repeated `Cannot bind argument to parameter 'Path' because it is an empty string` dialogs when starting an export.
+- Replaced PowerShell stream redirection used by FFprobe with .NET `ProcessStartInfo`.
+- Replaced PowerShell stream redirection used by FFmpeg with .NET `ProcessStartInfo`.
+- FFmpeg and FFprobe output/error streams are now captured directly without triggering PS2EXE path-binding errors.
+
+### Changed
+
+- Retains FFmpeg diagnostic capture for the HTML processing report using the new process-handling method.
+- Application version updated from **1.3.0** to **1.3.1**.
+- About window now displays **Version 1.3.1**.
+- Recommended executable filename is now `Clip Creator v1.3.1.exe`.
+
+
 ## 1.3.0
 
 ### Added

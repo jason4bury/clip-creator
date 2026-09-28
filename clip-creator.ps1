@@ -1,5 +1,5 @@
 ﻿# Random Movie Clips - Pixel-matched GUI
-$script:AppVersion = "1.3.0"
+$script:AppVersion = "1.5.0"
 # Visual design uses the supplied reference image as the interface artwork.
 # One random MP4 clip per movie; preserves source folders and creates <Movie Name>\backdrops
 # Requires ffmpeg.exe and ffprobe.exe in PATH or beside this script.
@@ -32,10 +32,43 @@ $script:CreatedCount = 0
 $script:StartTime = $null
 
 function Find-Tool([string]$Name) {
-    $local = Join-Path $PSScriptRoot "$Name.exe"
-    if (Test-Path $local) { return $local }
-    $cmd = Get-Command "$Name.exe" -ErrorAction SilentlyContinue
-    if ($cmd) { return $cmd.Source }
+    # PS2EXE can leave script-location variables null/empty.
+    # Avoid PowerShell Path parameters here entirely.
+    $candidateDirs = New-Object System.Collections.Generic.List[string]
+
+    if (-not [string]::IsNullOrWhiteSpace($PSScriptRoot)) {
+        $candidateDirs.Add($PSScriptRoot)
+    }
+
+    try {
+        $exeDir = [System.IO.Path]::GetDirectoryName([System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName)
+        if (-not [string]::IsNullOrWhiteSpace($exeDir)) {
+            $candidateDirs.Add($exeDir)
+        }
+    } catch {}
+
+    try {
+        $appDir = [System.AppContext]::BaseDirectory
+        if (-not [string]::IsNullOrWhiteSpace($appDir)) {
+            $candidateDirs.Add($appDir)
+        }
+    } catch {}
+
+    foreach ($dir in ($candidateDirs | Select-Object -Unique)) {
+        try {
+            $local = [System.IO.Path]::Combine($dir, "$Name.exe")
+            if ([System.IO.File]::Exists($local)) { return $local }
+        } catch {}
+    }
+
+    try {
+        $cmd = Get-Command "$Name.exe" -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($cmd) {
+            if (-not [string]::IsNullOrWhiteSpace($cmd.Path)) { return $cmd.Path }
+            if (-not [string]::IsNullOrWhiteSpace($cmd.Source)) { return $cmd.Source }
+        }
+    } catch {}
+
     return $null
 }
 
@@ -629,7 +662,7 @@ $hotStart.Add_Click({
     $clipLength = [int]$numLength.Value
     $avoid = [int]$numAvoid.Value
 
-    if (-not (Test-Path $movieFolder -PathType Container)) {
+    if ([string]::IsNullOrWhiteSpace($movieFolder) -or -not [System.IO.Directory]::Exists($movieFolder)) {
         [System.Windows.Forms.MessageBox]::Show("Please select a valid Movies Folder.","Movies Folder")
         return
     }
@@ -645,7 +678,12 @@ $hotStart.Add_Click({
         return
     }
 
-    New-Item -ItemType Directory -Path $outputFolder -Force | Out-Null
+    try {
+        [System.IO.Directory]::CreateDirectory($outputFolder) | Out-Null
+    } catch {
+        [System.Windows.Forms.MessageBox]::Show("The Output Folder could not be created or accessed.`r`n`r`n$($_.Exception.Message)","Output Folder")
+        return
+    }
     $exts = @(".mkv",".mp4",".avi",".mov",".m4v",".wmv",".mpg",".mpeg",".ts",".m2ts",".webm")
     if ($chkRecursive.Checked) {
         $movies = @(Get-ChildItem -LiteralPath $movieFolder -File -Recurse -ErrorAction SilentlyContinue |
@@ -693,7 +731,24 @@ $hotStart.Add_Click({
         }
         [System.Windows.Forms.Application]::DoEvents()
 
-        $durationText = & $ffprobe -v error -show_entries format=duration -of "default=noprint_wrappers=1:nokey=1" -- "$($movie.FullName)" 2>$null
+        # Do not use PowerShell redirection such as 2>$null here.
+        # PS2EXE can interpret $null as a redirection Path and display
+        # "Cannot bind argument to parameter 'Path'" message boxes.
+        $probeInfo = New-Object System.Diagnostics.ProcessStartInfo
+        $probeInfo.FileName = $ffprobe
+        $probeInfo.UseShellExecute = $false
+        $probeInfo.CreateNoWindow = $true
+        $probeInfo.RedirectStandardOutput = $true
+        $probeInfo.RedirectStandardError = $true
+        $probeInfo.Arguments = '-v error -show_entries format=duration -of "default=noprint_wrappers=1:nokey=1" "' + ($movie.FullName.Replace('"','\"')) + '"'
+
+        $probeProcess = New-Object System.Diagnostics.Process
+        $probeProcess.StartInfo = $probeInfo
+        [void]$probeProcess.Start()
+        $durationText = $probeProcess.StandardOutput.ReadToEnd()
+        $probeError = $probeProcess.StandardError.ReadToEnd()
+        $probeProcess.WaitForExit()
+
         $duration = 0.0
         $ok = [double]::TryParse(
             ($durationText | Select-Object -First 1),
@@ -746,25 +801,37 @@ $hotStart.Add_Click({
 
             $parentOut = $outputFolder
             if (-not [string]::IsNullOrWhiteSpace($relativeDirectory)) {
-                $parentOut = Join-Path -Path $outputFolder -ChildPath $relativeDirectory
+                $parentOut = [System.IO.Path]::Combine($outputFolder, $relativeDirectory)
             }
 
-            # Each video gets a movie folder and theme.mp4 is stored inside its backdrops directory.
-            $movieOut = Join-Path $parentOut $safeName
-            $backdropsOut = Join-Path $movieOut "backdrops"
-            New-Item -ItemType Directory -Path $movieOut -Force | Out-Null
-            New-Item -ItemType Directory -Path $backdropsOut -Force | Out-Null
-            $outputFile = Join-Path $backdropsOut "theme.mp4"
+            # Preserve the source movie folder and put theme.mp4 directly
+            # into its backdrops folder. Do not create an extra folder based
+            # on the video filename.
+            # Example: Mad Max (1979)\Mad Max.mkv
+            #       -> Mad Max (1979)\backdrops\theme.mp4
+            $backdropsOut = [System.IO.Path]::Combine($parentOut, "backdrops")
+            [System.IO.Directory]::CreateDirectory($backdropsOut) | Out-Null
+            $outputFile = [System.IO.Path]::Combine($backdropsOut, "theme.mp4")
             # Ask before replacing an existing clip for this movie.
-            if (Test-Path -LiteralPath $outputFile) {
+            if ([System.IO.File]::Exists($outputFile)) {
                 $overwriteChoice = [System.Windows.Forms.MessageBox]::Show(
-                    "A clip already exists for:`r`n`r`n$($movie.Name)`r`n`r`nDo you want to overwrite the existing theme.mp4?",
+                    "A clip already exists for:`r`n`r`n$($movie.Name)`r`n`r`nYes = overwrite this clip`r`nNo = keep it and continue`r`nCancel = stop files being created",
                     "Clip Already Exists",
-                    [System.Windows.Forms.MessageBoxButtons]::YesNo,
+                    [System.Windows.Forms.MessageBoxButtons]::YesNoCancel,
                     [System.Windows.Forms.MessageBoxIcon]::Question
                 )
 
-                if ($overwriteChoice -ne [System.Windows.Forms.DialogResult]::Yes) {
+                if ($overwriteChoice -eq [System.Windows.Forms.DialogResult]::Cancel) {
+                    $script:CancelRequested = $true
+                    $lblStatus.Text = "Cancelled"
+                    Add-Log "Processing cancelled by user at existing clip: $($movie.Name)" ([System.Drawing.Color]::Orange)
+                    $script:HtmlLogEntries.Add([pscustomobject]@{
+                        Status="SKIPPED"; Movie=$movie.Name; Output=$outputFile; Detail="Processing was cancelled by the user when an existing clip was found."
+                    })
+                    break
+                }
+
+                if ($overwriteChoice -eq [System.Windows.Forms.DialogResult]::No) {
                     Add-Log "Skipped existing clip: $outputFile"
                     $script:HtmlLogEntries.Add([pscustomobject]@{
                         Status="SKIPPED"; Movie=$movie.Name; Output=$outputFile; Detail="Existing theme.mp4 was kept."
@@ -799,13 +866,29 @@ $hotStart.Add_Click({
 
             # Capture FFmpeg diagnostics so they can be included in the HTML report
             # instead of being lost in the console.
-            $ffmpegOutput = @(& $ffmpeg -hide_banner -loglevel error -ss $start -i "$($movie.FullName)" -t $clipLength `
-                -map 0:v:0 -map "0:a:0?" -c:v libx264 -preset fast -crf 20 `
-                -c:a aac -b:a 192k -movflags +faststart -y "$outputFile" 2>&1)
-            $ffmpegExitCode = $LASTEXITCODE
-            $ffmpegDetail = (($ffmpegOutput | ForEach-Object { $_.ToString() }) -join "`r`n").Trim()
+            # Run FFmpeg through ProcessStartInfo as well. This avoids PowerShell
+            # stream redirection inside a PS2EXE-compiled GUI.
+            $ffmpegInfo = New-Object System.Diagnostics.ProcessStartInfo
+            $ffmpegInfo.FileName = $ffmpeg
+            $ffmpegInfo.UseShellExecute = $false
+            $ffmpegInfo.CreateNoWindow = $true
+            $ffmpegInfo.RedirectStandardOutput = $true
+            $ffmpegInfo.RedirectStandardError = $true
 
-            if ($ffmpegExitCode -eq 0 -and (Test-Path $outputFile)) {
+            $inputEscaped = $movie.FullName.Replace('"','\"')
+            $outputEscaped = $outputFile.Replace('"','\"')
+            $ffmpegInfo.Arguments = "-hide_banner -loglevel error -ss $start -i `"$inputEscaped`" -t $clipLength -map 0:v:0 -map `"0:a:0?`" -c:v libx264 -preset fast -crf 20 -c:a aac -b:a 192k -movflags +faststart -y `"$outputEscaped`""
+
+            $ffmpegProcess = New-Object System.Diagnostics.Process
+            $ffmpegProcess.StartInfo = $ffmpegInfo
+            [void]$ffmpegProcess.Start()
+            $ffmpegStdOut = $ffmpegProcess.StandardOutput.ReadToEnd()
+            $ffmpegStdErr = $ffmpegProcess.StandardError.ReadToEnd()
+            $ffmpegProcess.WaitForExit()
+            $ffmpegExitCode = $ffmpegProcess.ExitCode
+            $ffmpegDetail = (($ffmpegStdErr + "`r`n" + $ffmpegStdOut).Trim())
+
+            if ($ffmpegExitCode -eq 0 -and [System.IO.File]::Exists($outputFile)) {
                 $script:CreatedCount++
                 $lblCreated.Text = "$($script:CreatedCount)"
                 $lblStatus.Text = "Clip created"
@@ -848,6 +931,113 @@ $hotStart.Add_Click({
         $lblStatus.Text = "Stopped"
         $lblMovieNumber.Text = "Processing cancelled"
         Add-Log "Processing stopped by user." ([System.Drawing.Color]::Orange)
+
+        # Create a partial HTML conversion log for everything processed before cancellation.
+        $partialReportFile = $null
+        if ([System.IO.Directory]::Exists($outputFolder)) {
+            $reportTime = Get-Date
+            $partialReportFile = [System.IO.Path]::Combine(
+                $outputFolder,
+                ("Clip-Creator-Partial-Log-{0}.html" -f $reportTime.ToString("yyyyMMdd-HHmmss"))
+            )
+
+            $successCount = @($script:HtmlLogEntries | Where-Object Status -eq "SUCCESS").Count
+            $warningCount = @($script:HtmlLogEntries | Where-Object Status -eq "WARNING").Count
+            $errorCount = @($script:HtmlLogEntries | Where-Object Status -eq "ERROR").Count
+            $skippedCount = @($script:HtmlLogEntries | Where-Object Status -eq "SKIPPED").Count
+
+            $partialRows = foreach ($entry in $script:HtmlLogEntries) {
+                $statusClass = $entry.Status.ToLowerInvariant()
+                $icon = switch ($entry.Status) {
+                    "SUCCESS" { "&#10003;" }
+                    "WARNING" { "&#9888;" }
+                    "ERROR"   { "&#10006;" }
+                    "SKIPPED" { "&#8212;" }
+                    default   { "&#8226;" }
+                }
+                $movieHtml = [System.Net.WebUtility]::HtmlEncode([string]$entry.Movie)
+                $outputHtml = [System.Net.WebUtility]::HtmlEncode([string]$entry.Output)
+                $detailHtml = [System.Net.WebUtility]::HtmlEncode([string]$entry.Detail)
+                "<tr class='$statusClass'><td class='status'><span class='status-icon'>$icon</span>$($entry.Status)</td><td>$movieHtml</td><td class='path'>$outputHtml</td><td><pre>$detailHtml</pre></td></tr>"
+            }
+
+            $partialHtml = @"
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clip Creator Partial Processing Report</title>
+<style>
+:root { color-scheme:dark; }
+* { box-sizing:border-box; }
+body { margin:0; background:#07111f; color:#e7eef8; font-family:Segoe UI,Arial,sans-serif; }
+header { padding:34px 42px; background:linear-gradient(135deg,#0b1e35,#102b4b); border-bottom:1px solid #24496d; }
+.brand { display:flex; align-items:center; gap:18px; }
+.logo { width:58px;height:58px;border-radius:15px;background:linear-gradient(135deg,#18b7ff,#7357ff);display:grid;place-items:center;font-size:30px;box-shadow:0 10px 28px #0008; }
+h1 { margin:0;font-size:30px; } .subtitle { margin-top:5px;color:#9fb7d1; }
+.cancelled { margin-top:18px;padding:13px 16px;border-radius:10px;background:#4a3511;border:1px solid #8b6723;color:#ffd166;font-weight:600; }
+main { max-width:1500px;margin:auto;padding:28px 34px 50px; }
+.cards { display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:15px;margin-bottom:25px; }
+.card { background:#0d1c2e;border:1px solid #213b56;border-radius:13px;padding:18px;box-shadow:0 8px 24px #0004; }
+.number { font-size:28px;font-weight:700; } .label { color:#91a8c0;margin-top:4px; }
+.success-card .number {color:#64e49a}.warning-card .number{color:#ffd166}.error-card .number{color:#ff6b78}.skipped-card .number{color:#9fb7d1}
+.meta{color:#9fb7d1;margin:0 0 20px}.table-wrap{overflow:auto;border:1px solid #213b56;border-radius:13px;background:#0b1828}
+table{width:100%;border-collapse:collapse;min-width:950px}th{text-align:left;padding:14px;background:#10243a;color:#bcd2e8}td{padding:14px;border-top:1px solid #1c334a;vertical-align:top}
+tr.success{border-left:4px solid #43d17d}tr.warning{border-left:4px solid #ffc857;background:#2a220e55}tr.error{border-left:4px solid #ff5263;background:#32131a88}tr.skipped{border-left:4px solid #8195aa}
+.status{font-weight:700;white-space:nowrap}.success .status{color:#64e49a}.warning .status{color:#ffd166}.error .status{color:#ff7a86}.skipped .status{color:#a9bacb}
+.status-icon{display:inline-block;width:25px;font-size:18px}.path{color:#9fc8ef;word-break:break-all}pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:Cascadia Mono,Consolas,monospace;font-size:12px}
+footer{color:#7189a1;text-align:center;padding:26px}
+</style>
+</head>
+<body>
+<header>
+<div class="brand"><div class="logo">&#127916;</div><div><h1>Clip Creator</h1><div class="subtitle">Partial Processing Report &bull; Version $($script:AppVersion)</div></div></div>
+<div class="cancelled">&#9888; Processing was stopped by the user. This report contains results up to the point of cancellation.</div>
+</header>
+<main>
+<div class="cards">
+<div class="card success-card"><div class="number">$successCount</div><div class="label">Successful</div></div>
+<div class="card warning-card"><div class="number">$warningCount</div><div class="label">Warnings</div></div>
+<div class="card error-card"><div class="number">$errorCount</div><div class="label">Errors</div></div>
+<div class="card skipped-card"><div class="number">$skippedCount</div><div class="label">Skipped</div></div>
+</div>
+<p class="meta">Processing stopped $([System.Net.WebUtility]::HtmlEncode($reportTime.ToString("dd MMMM yyyy HH:mm:ss"))) &bull; $($script:CreatedCount) clip(s) created before cancellation</p>
+<div class="table-wrap"><table><thead><tr><th>Status</th><th>Movie</th><th>Output</th><th>Details / FFmpeg messages</th></tr></thead><tbody>
+$($partialRows -join "`r`n")
+</tbody></table></div>
+</main>
+<footer>Generated by Clip Creator &bull; Jason Rhodes &bull; FFmpeg</footer>
+</body>
+</html>
+"@
+            [System.IO.File]::WriteAllText($partialReportFile, $partialHtml, [System.Text.UTF8Encoding]::new($false))
+            Add-Log "Partial HTML log saved: $partialReportFile" ([System.Drawing.Color]::LightSkyBlue)
+        }
+
+        if ($script:CreatedCount -gt 0 -and [System.IO.Directory]::Exists($outputFolder)) {
+            $viewPartialLog = [System.Windows.Forms.MessageBox]::Show(
+                "Processing was stopped.`r`n`r`n$($script:CreatedCount) clip(s) were created before processing stopped.`r`n`r`nWould you like to view the partial HTML conversion log?",
+                "Partial Conversion Log",
+                [System.Windows.Forms.MessageBoxButtons]::YesNo,
+                [System.Windows.Forms.MessageBoxIcon]::Information
+            )
+            if ($viewPartialLog -eq [System.Windows.Forms.DialogResult]::Yes -and
+                -not [string]::IsNullOrWhiteSpace($partialReportFile) -and
+                [System.IO.File]::Exists($partialReportFile)) {
+                Start-Process $partialReportFile
+            }
+
+            $partialResult = [System.Windows.Forms.MessageBox]::Show(
+                "Would you also like to open the partial output folder containing the clips created so far?",
+                "Partial Output Folder",
+                [System.Windows.Forms.MessageBoxButtons]::YesNo,
+                [System.Windows.Forms.MessageBoxIcon]::Information
+            )
+            if ($partialResult -eq [System.Windows.Forms.DialogResult]::Yes) {
+                Start-Process explorer.exe -ArgumentList "`"$outputFolder`""
+            }
+        }
     } else {
         $lblPercent.Text = "100%"
         $progressFill.Width = $progressTrack.Width
@@ -858,7 +1048,7 @@ $hotStart.Add_Click({
 
         # Build a self-contained HTML processing report.
         $reportTime = Get-Date
-        $reportFile = Join-Path $outputFolder ("Clip-Creator-Log-{0}.html" -f $reportTime.ToString("yyyyMMdd-HHmmss"))
+        $reportFile = [System.IO.Path]::Combine($outputFolder, ("Clip-Creator-Log-{0}.html" -f $reportTime.ToString("yyyyMMdd-HHmmss")))
         $successCount = @($script:HtmlLogEntries | Where-Object Status -eq "SUCCESS").Count
         $warningCount = @($script:HtmlLogEntries | Where-Object Status -eq "WARNING").Count
         $errorCount = @($script:HtmlLogEntries | Where-Object Status -eq "ERROR").Count

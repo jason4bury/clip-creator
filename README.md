@@ -11,20 +11,25 @@ generated clip saved as `theme.mp4`.
 
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)
-![Version](https://img.shields.io/badge/version-1.3.0-00BFFF)
+![Version](https://img.shields.io/badge/version-1.5.0-00BFFF)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-## What's New in v1.3.0
+## What's New in v1.5.0
 
-- **Network-aware folder browsing** — the Movies Folder and Output Folder selectors now use the Windows Shell folder picker.
-- **Mapped network drive support** — mapped drives used for NAS storage are much easier to browse and select.
-- **Synology/NAS friendly** — designed to work with movie collections accessed through Windows network drives.
-- **UNC path support** — network shares such as `\\Synology\Movies` can be used directly.
-- **Local and network locations** — the same Browse controls work with local folders, This PC and Windows network locations.
-- **Fallback folder picker** — if the Windows Shell picker cannot be opened, Clip Creator falls back to the standard Windows Forms folder browser.
-- **Version update** — Clip Creator is now **1.3.0**.
+- **Cleaner output structure** — generated clips are now stored directly in the source movie folder structure as `backdrops\theme.mp4`, without creating an unnecessary extra folder based on the video filename.
+- **Partial HTML conversion log** — if processing is stopped, Clip Creator creates a graphical HTML report containing everything processed up to the point of cancellation.
+- **Partial output access** — after cancellation, Clip Creator can open the output folder containing clips that were successfully created before processing stopped.
+- **Separate cancellation prompts** — users can choose whether to view the partial HTML conversion log and whether to open the partial output folder.
+- **Cancellation summary** — the partial report clearly identifies that processing was stopped and shows how many clips were created before cancellation.
+- **Version update** — Clip Creator is now **1.5.0**.
 
 ## Features
+
+- **Partial HTML conversion log** — creates a colour-coded report when a run is stopped early.
+- **Partial output access** — optionally opens clips created before cancellation.
+- **Cleaner backdrops structure** — outputs directly to `Movie Folder\backdrops\theme.mp4`.
+
+- **Stop remaining creations** — cancel the rest of a run directly from the existing-clip overwrite prompt.
 
 - **Network-aware folder browsing** — browse mapped network drives and Windows network locations.
 - **UNC share support** — use NAS paths such as `\\Synology\Movies`.
@@ -73,6 +78,24 @@ ffprobe -version
 ```
 
 Clip Creator also includes a **Check FFmpeg** button.
+
+## Output Folder Structure
+
+Clip Creator preserves the directory structure below the selected Movies Folder. It no longer creates an additional folder based on the video filename.
+
+For example, this source:
+
+```text
+V:\Movies\Mad Max (1979)\Mad Max.mkv
+```
+
+produces:
+
+```text
+D:\Random Clips\Mad Max (1979)\backdrops\theme.mp4
+```
+
+If processing is stopped early, clips that were already completed remain in the output folder.
 
 ## Network and NAS Storage
 
@@ -155,11 +178,11 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 Install-Module -Name ps2exe -Scope CurrentUser -Force
 Import-Module ps2exe
 
-Invoke-ps2exe -inputFile .\clip-creator.ps1 -outputFile ".\Clip Creator v1.3.0.exe" `
+Invoke-ps2exe -inputFile .\clip-creator.ps1 -outputFile ".\Clip Creator v1.5.0.exe" `
     -STA -noConsole `
     -iconFile .\clip-creator.ico `
     -title "Clip Creator" `
-    -version "1.3.0" `
+    -version "1.5.0" `
     -product "Clip Creator" `
     -company "Jason Rhodes" `
     -copyright "Copyright © 2026 Jason Rhodes"
@@ -168,7 +191,7 @@ Invoke-ps2exe -inputFile .\clip-creator.ps1 -outputFile ".\Clip Creator v1.3.0.e
 The recommended executable filename is:
 
 ``` text
-Clip Creator v1.3.0.exe
+Clip Creator v1.5.0.exe
 ```
 
 ## Processing Report
@@ -182,6 +205,10 @@ Clip-Creator-Log-20260928-095800.html
 The self-contained web page includes summary cards for **Successful**, **Warnings**, **Errors** and **Skipped**, plus a detailed table showing each movie, its output path and any FFmpeg diagnostic messages.
 
 Clip Creator asks whether you want to view the report immediately after processing. Errors are highlighted in red and warnings in yellow.
+
+## Compiled EXE Notes
+
+Clip Creator v1.5.0 includes a compatibility fix specifically for the PS2EXE-compiled application. FFmpeg and FFprobe are launched using .NET process handling rather than PowerShell stream redirection. This prevents the repeated `Path` error dialogs seen in v1.3.0 while retaining captured FFmpeg diagnostics for the HTML report.
 
 ## Troubleshooting
 
@@ -227,7 +254,7 @@ one folder per movie.
 
 ## Version
 
-Current release: **1.3.0**
+Current release: **1.5.0**
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 
