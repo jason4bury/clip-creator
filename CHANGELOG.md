@@ -2,6 +2,26 @@
 
 All notable changes to Clip Creator are documented in this file.
 
+## 1.2.0
+
+### Added
+
+- Self-contained HTML processing report generated after completed runs.
+- Colour-coded summary for successful clips, warnings, errors and skipped movies.
+- Detailed per-movie report containing output paths and FFmpeg diagnostics.
+- Capture of FFmpeg diagnostic output for inclusion in the report.
+- Prompt to view the HTML log in the default web browser.
+- Timestamped report filenames so separate run reports are retained.
+
+### Changed
+
+- Successfully created clips that also produce FFmpeg diagnostic messages can be identified as warnings.
+- Processing diagnostics are retained in a readable web report.
+- Application version updated from **1.1.0** to **1.2.0**.
+- About window now displays **Version 1.2.0**.
+- Recommended executable filename is now `Clip Creator v1.2.0.exe`.
+
+
 ## 1.1.0
 
 ### Added

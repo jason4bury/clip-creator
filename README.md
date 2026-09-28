@@ -11,17 +11,20 @@ generated clip saved as `theme.mp4`.
 
 ![Platform](https://img.shields.io/badge/platform-Windows-blue)
 ![PowerShell](https://img.shields.io/badge/PowerShell-5.1%2B-5391FE)
-![Version](https://img.shields.io/badge/version-1.1.0-00BFFF)
+![Version](https://img.shields.io/badge/version-1.2.0-00BFFF)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-## What's New in v1.1.0
+## What's New in v1.2.0
 
-- **Preserved source folder structure** — Clip Creator now recreates the directories beneath the selected Movies Folder in the output location.
-- **Backdrops folders** — every processed movie gets a `backdrops` directory.
-- **New clip location** — generated clips are stored as `backdrops\theme.mp4`.
-- **Safer path handling** — source drive letters such as `V:\` are no longer accidentally included beneath the destination folder.
-- **Path fixes** — corrected relative-path handling and the `$movieFolder` variable used by `GetFullPath()`.
-- **Updated About window** — displays **Version 1.1.0**.
+- **HTML processing report** — creates a self-contained web-page log after each completed run.
+- **Colour-coded results** — successful clips are green, warnings yellow, errors red and skipped movies separately identified.
+- **FFmpeg diagnostics** — captures FFmpeg messages against the relevant movie.
+- **Error highlighting** — failed exports and FFprobe duration errors are clearly highlighted.
+- **Warning handling** — successfully created clips with FFmpeg diagnostic messages can be shown as warnings instead of failures.
+- **Run summary** — displays totals for successful, warning, error and skipped results.
+- **View Log prompt** — asks whether to open the report in the default browser after processing.
+- **Timestamped logs** — reports use names such as `Clip-Creator-Log-20260928-095800.html`.
+- **Version update** — Clip Creator is now **1.2.0**.
 
 ## Features
 
@@ -129,11 +132,11 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
 Install-Module -Name ps2exe -Scope CurrentUser -Force
 Import-Module ps2exe
 
-Invoke-ps2exe -inputFile .\clip-creator.ps1 -outputFile ".\Clip Creator v1.1.0.exe" `
+Invoke-ps2exe -inputFile .\clip-creator.ps1 -outputFile ".\Clip Creator v1.2.0.exe" `
     -STA -noConsole `
     -iconFile .\clip-creator.ico `
     -title "Clip Creator" `
-    -version "1.1.0" `
+    -version "1.2.0" `
     -product "Clip Creator" `
     -company "Jason Rhodes" `
     -copyright "Copyright © 2026 Jason Rhodes"
@@ -142,8 +145,20 @@ Invoke-ps2exe -inputFile .\clip-creator.ps1 -outputFile ".\Clip Creator v1.1.0.e
 The recommended executable filename is:
 
 ``` text
-Clip Creator v1.1.0.exe
+Clip Creator v1.2.0.exe
 ```
+
+## Processing Report
+
+After a completed run, Clip Creator writes a timestamped HTML report into the selected output folder, for example:
+
+```text
+Clip-Creator-Log-20260928-095800.html
+```
+
+The self-contained web page includes summary cards for **Successful**, **Warnings**, **Errors** and **Skipped**, plus a detailed table showing each movie, its output path and any FFmpeg diagnostic messages.
+
+Clip Creator asks whether you want to view the report immediately after processing. Errors are highlighted in red and warnings in yellow.
 
 ## Troubleshooting
 
@@ -189,7 +204,7 @@ one folder per movie.
 
 ## Version
 
-Current release: **1.1.0**
+Current release: **1.2.0**
 
 See [CHANGELOG.md](CHANGELOG.md) for release notes.
 

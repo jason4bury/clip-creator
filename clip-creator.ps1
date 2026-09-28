@@ -1,5 +1,5 @@
 ﻿# Random Movie Clips - Pixel-matched GUI
-$script:AppVersion = "1.1.0"
+$script:AppVersion = "1.2.0"
 # Visual design uses the supplied reference image as the interface artwork.
 # One random MP4 clip per movie; preserves source folders and creates <Movie Name>\backdrops
 # Requires ffmpeg.exe and ffprobe.exe in PATH or beside this script.
@@ -628,6 +628,7 @@ $hotStart.Add_Click({
     $script:CancelRequested = $false
     $script:CreatedCount = 0
     $script:StartTime = Get-Date
+    $script:HtmlLogEntries = New-Object System.Collections.Generic.List[object]
     $lblFound.Text = "$($movies.Count)"
     $lblCreated.Text = "0"
     $lblPercent.Text = "0%"
@@ -668,6 +669,9 @@ $hotStart.Add_Click({
 
         if (-not $ok -or $duration -le $clipLength) {
             Add-Log "Skipped: $($movie.Name) - could not obtain a usable duration." ([System.Drawing.Color]::Salmon)
+            $script:HtmlLogEntries.Add([pscustomobject]@{
+                Status="ERROR"; Movie=$movie.Name; Output=""; Detail="Could not obtain a usable duration with FFprobe."
+            })
         } else {
             $minStart = 0
             $maxStart = [Math]::Floor($duration - $clipLength)
@@ -727,6 +731,9 @@ $hotStart.Add_Click({
 
                 if ($overwriteChoice -ne [System.Windows.Forms.DialogResult]::Yes) {
                     Add-Log "Skipped existing clip: $outputFile"
+                    $script:HtmlLogEntries.Add([pscustomobject]@{
+                        Status="SKIPPED"; Movie=$movie.Name; Output=$outputFile; Detail="Existing theme.mp4 was kept."
+                    })
 
                     # Count the skipped movie as processed so progress continues normally.
                     $pct = [Math]::Round(($index / $movies.Count) * 100)
@@ -755,17 +762,38 @@ $hotStart.Add_Click({
             $lblStatus.Text = "Creating MP4..."
             [System.Windows.Forms.Application]::DoEvents()
 
-            & $ffmpeg -hide_banner -loglevel error -ss $start -i "$($movie.FullName)" -t $clipLength `
+            # Capture FFmpeg diagnostics so they can be included in the HTML report
+            # instead of being lost in the console.
+            $ffmpegOutput = @(& $ffmpeg -hide_banner -loglevel error -ss $start -i "$($movie.FullName)" -t $clipLength `
                 -map 0:v:0 -map "0:a:0?" -c:v libx264 -preset fast -crf 20 `
-                -c:a aac -b:a 192k -movflags +faststart -y "$outputFile"
+                -c:a aac -b:a 192k -movflags +faststart -y "$outputFile" 2>&1)
+            $ffmpegExitCode = $LASTEXITCODE
+            $ffmpegDetail = (($ffmpegOutput | ForEach-Object { $_.ToString() }) -join "`r`n").Trim()
 
-            if ($LASTEXITCODE -eq 0 -and (Test-Path $outputFile)) {
+            if ($ffmpegExitCode -eq 0 -and (Test-Path $outputFile)) {
                 $script:CreatedCount++
                 $lblCreated.Text = "$($script:CreatedCount)"
                 $lblStatus.Text = "Clip created"
                 Add-Log "Saved: $outputFile" ([System.Drawing.Color]::LightGreen)
+
+                if ([string]::IsNullOrWhiteSpace($ffmpegDetail)) {
+                    $script:HtmlLogEntries.Add([pscustomobject]@{
+                        Status="SUCCESS"; Movie=$movie.Name; Output=$outputFile; Detail="Clip created successfully."
+                    })
+                } else {
+                    Add-Log "Clip created with FFmpeg warnings: $($movie.Name)" ([System.Drawing.Color]::Khaki)
+                    $script:HtmlLogEntries.Add([pscustomobject]@{
+                        Status="WARNING"; Movie=$movie.Name; Output=$outputFile; Detail=$ffmpegDetail
+                    })
+                }
             } else {
                 Add-Log "FFmpeg failed: $($movie.Name)" ([System.Drawing.Color]::Salmon)
+                if ([string]::IsNullOrWhiteSpace($ffmpegDetail)) {
+                    $ffmpegDetail = "FFmpeg exited with code $ffmpegExitCode and did not create a valid output clip."
+                }
+                $script:HtmlLogEntries.Add([pscustomobject]@{
+                    Status="ERROR"; Movie=$movie.Name; Output=$outputFile; Detail=$ffmpegDetail
+                })
             }
         }
 
@@ -792,6 +820,110 @@ $hotStart.Add_Click({
         $lblElapsed.Text = "00:00:00"
         $lblMovieNumber.Text = "$($script:CreatedCount) clips created"
         Add-Log "Finished. Created $($script:CreatedCount) clip(s)." ([System.Drawing.Color]::LightGreen)
+
+        # Build a self-contained HTML processing report.
+        $reportTime = Get-Date
+        $reportFile = Join-Path $outputFolder ("Clip-Creator-Log-{0}.html" -f $reportTime.ToString("yyyyMMdd-HHmmss"))
+        $successCount = @($script:HtmlLogEntries | Where-Object Status -eq "SUCCESS").Count
+        $warningCount = @($script:HtmlLogEntries | Where-Object Status -eq "WARNING").Count
+        $errorCount = @($script:HtmlLogEntries | Where-Object Status -eq "ERROR").Count
+        $skippedCount = @($script:HtmlLogEntries | Where-Object Status -eq "SKIPPED").Count
+
+        $rows = foreach ($entry in $script:HtmlLogEntries) {
+            $statusClass = $entry.Status.ToLowerInvariant()
+            $icon = switch ($entry.Status) {
+                "SUCCESS" { "&#10003;" }
+                "WARNING" { "&#9888;" }
+                "ERROR"   { "&#10006;" }
+                "SKIPPED" { "&#8212;" }
+                default   { "&#8226;" }
+            }
+            $movieHtml = [System.Net.WebUtility]::HtmlEncode([string]$entry.Movie)
+            $outputHtml = [System.Net.WebUtility]::HtmlEncode([string]$entry.Output)
+            $detailHtml = [System.Net.WebUtility]::HtmlEncode([string]$entry.Detail)
+            "<tr class='$statusClass'><td class='status'><span class='status-icon'>$icon</span>$($entry.Status)</td><td>$movieHtml</td><td class='path'>$outputHtml</td><td><pre>$detailHtml</pre></td></tr>"
+        }
+
+        $html = @"
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clip Creator Processing Report</title>
+<style>
+:root { color-scheme: dark; }
+* { box-sizing:border-box; }
+body { margin:0; background:#07111f; color:#e7eef8; font-family:Segoe UI,Arial,sans-serif; }
+header { padding:34px 42px; background:linear-gradient(135deg,#0b1e35,#102b4b); border-bottom:1px solid #24496d; }
+.brand { display:flex; align-items:center; gap:18px; }
+.logo { width:58px; height:58px; border-radius:15px; background:linear-gradient(135deg,#18b7ff,#7357ff); display:grid; place-items:center; font-size:30px; box-shadow:0 10px 28px #0008; }
+h1 { margin:0; font-size:30px; }
+.subtitle { margin-top:5px; color:#9fb7d1; }
+main { max-width:1500px; margin:auto; padding:28px 34px 50px; }
+.cards { display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:15px; margin-bottom:25px; }
+.card { background:#0d1c2e; border:1px solid #213b56; border-radius:13px; padding:18px; box-shadow:0 8px 24px #0004; }
+.card .number { font-size:28px; font-weight:700; }
+.card .label { color:#91a8c0; margin-top:4px; }
+.success-card .number { color:#64e49a; } .warning-card .number { color:#ffd166; }
+.error-card .number { color:#ff6b78; } .skipped-card .number { color:#9fb7d1; }
+.meta { color:#9fb7d1; margin:0 0 20px; }
+.table-wrap { overflow:auto; border:1px solid #213b56; border-radius:13px; background:#0b1828; }
+table { width:100%; border-collapse:collapse; min-width:950px; }
+th { text-align:left; padding:14px; background:#10243a; color:#bcd2e8; position:sticky; top:0; }
+td { padding:14px; border-top:1px solid #1c334a; vertical-align:top; }
+tr.success { border-left:4px solid #43d17d; }
+tr.warning { border-left:4px solid #ffc857; background:#2a220e55; }
+tr.error { border-left:4px solid #ff5263; background:#32131a88; }
+tr.skipped { border-left:4px solid #8195aa; }
+.status { font-weight:700; white-space:nowrap; }
+.success .status { color:#64e49a; } .warning .status { color:#ffd166; }
+.error .status { color:#ff7a86; } .skipped .status { color:#a9bacb; }
+.status-icon { display:inline-block; width:25px; font-size:18px; }
+.path { color:#9fc8ef; word-break:break-all; }
+pre { margin:0; white-space:pre-wrap; word-break:break-word; font-family:Cascadia Mono,Consolas,monospace; font-size:12px; color:inherit; }
+footer { color:#7189a1; text-align:center; padding:26px; }
+@media(max-width:800px){ .cards{grid-template-columns:repeat(2,1fr)} main{padding:20px 14px} header{padding:25px 20px} }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">&#127916;</div><div><h1>Clip Creator</h1><div class="subtitle">Processing Report &bull; Version $($script:AppVersion)</div></div></div>
+</header>
+<main>
+  <div class="cards">
+    <div class="card success-card"><div class="number">$successCount</div><div class="label">Successful</div></div>
+    <div class="card warning-card"><div class="number">$warningCount</div><div class="label">Warnings</div></div>
+    <div class="card error-card"><div class="number">$errorCount</div><div class="label">Errors</div></div>
+    <div class="card skipped-card"><div class="number">$skippedCount</div><div class="label">Skipped</div></div>
+  </div>
+  <p class="meta">Run completed $([System.Net.WebUtility]::HtmlEncode($reportTime.ToString("dd MMMM yyyy HH:mm:ss"))) &bull; $($movies.Count) movie(s) processed &bull; $($script:CreatedCount) clip(s) created</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Status</th><th>Movie</th><th>Output</th><th>Details / FFmpeg messages</th></tr></thead>
+      <tbody>
+        $($rows -join "`r`n")
+      </tbody>
+    </table>
+  </div>
+</main>
+<footer>Generated by Clip Creator &bull; Jason Rhodes &bull; FFmpeg</footer>
+</body>
+</html>
+"@
+        [System.IO.File]::WriteAllText($reportFile, $html, [System.Text.UTF8Encoding]::new($false))
+        Add-Log "HTML log saved: $reportFile" ([System.Drawing.Color]::LightSkyBlue)
+
+        $viewLog = [System.Windows.Forms.MessageBox]::Show(
+            "Processing has finished.`r`n`r`nA colour HTML report has been created.`r`n`r`nWould you like to view the log now?",
+            "View Processing Log",
+            [System.Windows.Forms.MessageBoxButtons]::YesNo,
+            [System.Windows.Forms.MessageBoxIcon]::Information
+        )
+        if ($viewLog -eq [System.Windows.Forms.DialogResult]::Yes) {
+            Start-Process $reportFile
+        }
+
         $openResult = [System.Windows.Forms.MessageBox]::Show(
             "Finished.`r`n`r`nCreated $($script:CreatedCount) random clip(s).`r`n`r`nWould you like to open the output folder?",
             "Random Movie Clips",
